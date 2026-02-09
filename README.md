@@ -1,6 +1,9 @@
 # traverse
 
-[![the diagram view](https://l4.dunkirk.sh/i/eAqE3K4HnppN.webp)](https://traverse.dunkirk.sh/diagram/6121f05c-a5ef-4ecf-8ffc-02534c5e767c)
+[![the diagram view](https://l4.dunkirk.sh/i/K1vXY48_1NcQ.webp)](https://traverse.dunkirk.sh/diagram/6121f05c-a5ef-4ecf-8ffc-02534c5e767c)
+
+> [!NOTE]
+> The canonical repo for this is hosted on tangled over at [`dunkirk.sh/traverse`](https://tangled.org/@dunkirk.sh/traverse)
 
 One of my favorite features about [amp](https://ampcode.com) is their walkthrough feature. It runs a sub agent which goes and breaks your repo into parts and then sends it up to amp's services to get rendered into a nice web page! I got curious and ended up dumping the tool prompt for both the walkthrough subagent and the tool prompt that generates the diagram.
 
@@ -43,8 +46,6 @@ For other agents its the same JSON config typically.
 
 ## Config
 
-### json config
-
 On macos edit/create `~/Library/Application Support/traverse/config.json`. If you are on Linux then `~/.config/traverse/config.json` (or `$XDG_CONFIG_HOME/traverse/config.json`)
 
 ```json
@@ -55,7 +56,7 @@ On macos edit/create `~/Library/Application Support/traverse/config.json`. If yo
 }
 ```
 
-### env vars
+alteratively or suplementally you can use env vars to define the same options:
 
 | var                  | default                       | description                                |
 | -------------------- | ----------------------------- | ------------------------------------------ |
@@ -63,8 +64,6 @@ On macos edit/create `~/Library/Application Support/traverse/config.json`. If yo
 | `TRAVERSE_MODE`      | `local`                       | `local` (mcp + web) or `server` (web only) |
 | `TRAVERSE_SHARE_URL` | `https://traverse.dunkirk.sh` | share server url                           |
 | `TRAVERSE_DATA_DIR`  | platform default              | sqlite db location                         |
-
-The canonical repo for this is hosted on tangled over at [`dunkirk.sh/traverse`](https://tangled.org/@dunkirk.sh/traverse)
 
 <p align="center">
     <img src="https://raw.githubusercontent.com/taciturnaxolotl/carriage/main/.github/images/line-break.svg" />
