@@ -14,4 +14,9 @@ export interface WalkthroughDiagram {
   code: string;
   summary: string;
   nodes: Record<string, NodeMetadata>;
+  createdAt?: string;
+}
+
+export interface TraverseConfig {
+  shareServerUrl: string;
 }

@@ -1,7 +1,14 @@
 import type { WalkthroughDiagram } from "./types.ts";
 
-export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string = "dev", projectRoot: string = ""): string {
+interface ViewerOptions {
+  mode?: "local" | "server";
+  shareServerUrl?: string;
+  diagramId?: string;
+}
+
+export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string = "dev", projectRoot: string = "", options: ViewerOptions = {}): string {
   const diagramJSON = JSON.stringify(diagram).replace(/<\//g, "<\\/");
+  const { mode = "local", shareServerUrl = "", diagramId = "" } = options;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -129,6 +136,32 @@ export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string 
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .share-btn {
+      margin-left: auto;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      font-family: inherit;
+    }
+    .share-btn:hover {
+      color: var(--text);
+      border-color: var(--text-muted);
+      background: var(--code-bg);
+    }
+    .share-btn.shared {
+      color: #16a34a;
+      border-color: #16a34a;
     }
 
     .diagram-wrap {
@@ -581,6 +614,12 @@ export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string 
     <span class="breadcrumb-title" id="breadcrumb-title">${escapeHTML(diagram.summary)}</span>
     <span class="sep header-sep">&rsaquo;</span>
     <span class="header-node" id="header-node"></span>
+    ${mode === "local" && shareServerUrl ? `<button class="share-btn" id="share-btn" title="Share diagram">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 12V14H12V12M8 2V10M5 5L8 2L11 5"/>
+      </svg>
+      <span>Share</span>
+    </button>` : ""}
   </div>
 
   <div class="diagram-wrap">
@@ -606,6 +645,9 @@ export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string 
 
     const DIAGRAM_DATA = ${diagramJSON};
     const PROJECT_ROOT = ${JSON.stringify(projectRoot)};
+    const SHARE_SERVER_URL = ${JSON.stringify(shareServerUrl)};
+    const DIAGRAM_ID = ${JSON.stringify(diagramId)};
+    const VIEWER_MODE = ${JSON.stringify(mode)};
 
     const COPY_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 11V3a1.5 1.5 0 011.5-1.5H11"/></svg>';
     const CHECK_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.5 3.5 6.5-7"/></svg>';
@@ -886,6 +928,37 @@ export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string 
     }
 
     init();
+
+    // Share button handler
+    const shareBtn = document.getElementById("share-btn");
+    if (shareBtn && SHARE_SERVER_URL) {
+      shareBtn.addEventListener("click", async () => {
+        shareBtn.disabled = true;
+        try {
+          const res = await fetch(SHARE_SERVER_URL + "/api/diagrams", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(DIAGRAM_DATA),
+          });
+          if (!res.ok) throw new Error("Share failed");
+          const data = await res.json();
+          await navigator.clipboard.writeText(data.url);
+          shareBtn.querySelector("span").textContent = "Copied link!";
+          shareBtn.classList.add("shared");
+          setTimeout(() => {
+            shareBtn.querySelector("span").textContent = "Share";
+            shareBtn.classList.remove("shared");
+          }, 2000);
+        } catch (e) {
+          shareBtn.querySelector("span").textContent = "Failed";
+          setTimeout(() => {
+            shareBtn.querySelector("span").textContent = "Share";
+          }, 2000);
+        } finally {
+          shareBtn.disabled = false;
+        }
+      });
+    }
   </script>
 </body>
 </html>`;
