@@ -9,6 +9,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Traverse — ${escapeHTML(diagram.summary)}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%232563eb'/><path d='M10 12h12M10 16h12M10 20h12' stroke='white' stroke-width='2' stroke-linecap='round'/></svg>" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css" id="hljs-dark" disabled />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github.min.css" id="hljs-light" />
   <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
@@ -24,6 +25,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       --text-muted: #666;
       --accent: #2563eb;
       --accent-hover: #1d4ed8;
+      --accent-subtle: rgba(37, 99, 235, 0.08);
       --node-hover: rgba(37, 99, 235, 0.08);
       --code-bg: #f4f4f5;
       --summary-bg: #f0f4ff;
@@ -40,6 +42,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
         --text-muted: #a3a3a3;
         --accent: #3b82f6;
         --accent-hover: #60a5fa;
+        --accent-subtle: rgba(59, 130, 246, 0.1);
         --node-hover: rgba(59, 130, 246, 0.12);
         --code-bg: #1c1c1e;
         --summary-bg: #111827;
@@ -55,7 +58,11 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       min-height: 100vh;
     }
 
+    /* ── Summary bar with breadcrumb ── */
     .summary-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
       padding: 12px 20px;
       background: var(--summary-bg);
       border-bottom: 1px solid var(--border);
@@ -64,6 +71,8 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       display: flex;
       align-items: center;
       gap: 8px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
 
     .summary-bar .label {
@@ -72,6 +81,46 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       text-transform: uppercase;
       font-size: 11px;
       letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+
+    .summary-bar .sep {
+      color: var(--text-muted);
+      flex-shrink: 0;
+      font-size: 11px;
+    }
+
+    .summary-bar .breadcrumb-title {
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    body.has-selection .summary-bar .breadcrumb-title {
+      cursor: pointer;
+    }
+
+    body.has-selection .summary-bar .breadcrumb-title:hover {
+      color: var(--text);
+    }
+
+    .summary-bar .header-sep,
+    .summary-bar .header-node {
+      display: none;
+    }
+
+    body.has-selection .summary-bar .header-sep,
+    body.has-selection .summary-bar .header-node {
+      display: inline;
+    }
+
+    .summary-bar .header-node {
+      color: var(--text);
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .diagram-section {
@@ -88,8 +137,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
     }
 
     .diagram-section svg {
-      max-height: none !important;
-      height: auto !important;
+      max-height: calc(100vh - 100px);
       width: 100%;
     }
 
@@ -124,6 +172,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
     .diagram-section .node g path {
       fill: var(--bg) !important;
       stroke: var(--text) !important;
+      transition: fill 0.15s, stroke 0.15s, stroke-width 0.15s;
     }
     .diagram-section .node .label,
     .diagram-section .node .nodeLabel,
@@ -263,8 +312,19 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
     }
 
     .diagram-section .node.selected :is(rect, circle, ellipse, polygon, path) {
-      fill: var(--code-bg) !important;
-      stroke-width: 2.5px !important;
+      fill: var(--text) !important;
+      stroke: var(--text) !important;
+      stroke-width: 2px !important;
+    }
+    .diagram-section .node.selected .label,
+    .diagram-section .node.selected .nodeLabel,
+    .diagram-section .node.selected text,
+    .diagram-section .node.selected foreignObject,
+    .diagram-section .node.selected foreignObject div,
+    .diagram-section .node.selected foreignObject span,
+    .diagram-section .node.selected foreignObject p {
+      color: var(--bg) !important;
+      fill: var(--bg) !important;
     }
 
     /* Edge hover */
@@ -298,6 +358,12 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
     }
 
     /* ── Detail section ── */
+    #detail-section {
+      transition: opacity 0.15s ease;
+    }
+
+    #detail-section.fading { opacity: 0; }
+
     .content-summary {
       font-size: 20px;
       font-weight: 600;
@@ -396,6 +462,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
 
     .code-snippet {
       margin-top: 12px;
+      position: relative;
     }
 
     .code-snippet pre {
@@ -406,12 +473,47 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       font-size: 13px;
       line-height: 1.5;
     }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 4px 6px;
+      cursor: pointer;
+      color: var(--text-muted);
+      opacity: 0;
+      transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .copy-btn svg { width: 14px; height: 14px; }
+
+    .code-snippet:hover .copy-btn { opacity: 1; }
+
+    .copy-btn:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .copy-btn.copied {
+      color: #16a34a;
+      border-color: #16a34a;
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
   <div class="summary-bar">
-    <span class="label">Traverse</span>
-    <span>${escapeHTML(diagram.summary)}</span>
+    <a class="label" href="/" style="text-decoration:none;color:inherit">Traverse</a>
+    <span class="sep">&rsaquo;</span>
+    <span class="breadcrumb-title" id="breadcrumb-title">${escapeHTML(diagram.summary)}</span>
+    <span class="sep header-sep">&rsaquo;</span>
+    <span class="header-node" id="header-node"></span>
   </div>
 
   <div class="content-wrap">
@@ -429,6 +531,9 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
     mermaid.registerLayoutLoaders(elkLayouts);
 
     const DIAGRAM_DATA = ${diagramJSON};
+
+    const COPY_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 11V3a1.5 1.5 0 011.5-1.5H11"/></svg>';
+    const CHECK_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.5 3.5 6.5-7"/></svg>';
 
     function initTheme() {
       const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -454,10 +559,43 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       requestAnimationFrame(() => {
         fitDiagram();
         attachClickHandlers();
-        renderAllNodes();
+
+        // Check URL hash for deep link
+        const hash = window.location.hash.slice(1);
+        if (hash && DIAGRAM_DATA.nodes[hash]) {
+          const svg = document.querySelector(".diagram-section svg");
+          const nodeEl = svg && findNodeEl(svg, hash);
+          if (nodeEl) {
+            selectNode(hash, nodeEl, false);
+          } else {
+            renderAllNodes();
+          }
+        } else {
+          renderAllNodes();
+        }
       });
 
       window.addEventListener("resize", fitDiagram);
+
+      // Header breadcrumb title click to deselect
+      document.getElementById("breadcrumb-title").addEventListener("click", (e) => {
+        if (selectedNodeId) {
+          e.stopPropagation();
+          deselectAll();
+        }
+      });
+
+      // Handle browser back/forward
+      window.addEventListener("hashchange", () => {
+        const hash = window.location.hash.slice(1);
+        if (!hash) {
+          deselectAll(true);
+        } else if (DIAGRAM_DATA.nodes[hash]) {
+          const svg = document.querySelector(".diagram-section svg");
+          const nodeEl = svg && findNodeEl(svg, hash);
+          if (nodeEl) selectNode(hash, nodeEl, false);
+        }
+      });
     }
 
     function fitDiagram() {
@@ -471,6 +609,23 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       svg.setAttribute("viewBox", vb);
       svg.removeAttribute("width");
       svg.removeAttribute("height");
+    }
+
+    function findNodeEl(svg, nodeId) {
+      const nodeIds = Object.keys(DIAGRAM_DATA.nodes);
+      const allNodes = svg.querySelectorAll(".node");
+      for (const nodeEl of allNodes) {
+        const id = nodeEl.id;
+        if (!id) continue;
+        const matchedId = nodeIds.find(nid =>
+          id === nid ||
+          id.endsWith("-" + nid) ||
+          id.startsWith("flowchart-" + nid + "-") ||
+          id.includes("-" + nid + "-")
+        );
+        if (matchedId === nodeId) return nodeEl;
+      }
+      return null;
     }
 
     function attachClickHandlers() {
@@ -507,13 +662,14 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
 
       // Click outside to deselect
       document.addEventListener("click", (e) => {
-        if (!e.target.closest(".detail-section") && !e.target.closest(".node")) {
+        if (!e.target.closest("#detail-section") && !e.target.closest(".node") && !e.target.closest(".summary-bar")) {
           deselectAll();
         }
       });
     }
 
     let selectedEl = null;
+    let selectedNodeId = null;
 
     function renderNodeCard(nodeId, meta) {
       let html = '<div class="node-card" data-card-id="' + escapeAttr(nodeId) + '">';
@@ -531,7 +687,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
 
       if (meta.codeSnippet) {
         html += '<div class="section-label">Code</div>';
-        html += '<div class="code-snippet"><pre><code>' + escapeText(meta.codeSnippet) + "</code></pre></div>";
+        html += '<div class="code-snippet"><button class="copy-btn" title="Copy code">' + COPY_ICON + '</button><pre><code>' + escapeText(meta.codeSnippet) + "</code></pre></div>";
       }
 
       html += '</div>';
@@ -546,6 +702,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       }
       section.innerHTML = html;
       highlightAll(section);
+      attachCopyButtons(section);
     }
 
     function highlightAll(container) {
@@ -554,28 +711,78 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       });
     }
 
-    function selectNode(nodeId, el) {
+    function attachCopyButtons(container) {
+      container.querySelectorAll(".copy-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const code = btn.closest(".code-snippet").querySelector("code").textContent;
+          navigator.clipboard.writeText(code).then(() => {
+            btn.innerHTML = CHECK_ICON;
+            btn.classList.add("copied");
+            setTimeout(() => {
+              btn.innerHTML = COPY_ICON;
+              btn.classList.remove("copied");
+            }, 1500);
+          });
+        });
+      });
+    }
+
+    function transitionContent(callback) {
+      const section = document.getElementById("detail-section");
+      section.classList.add("fading");
+      setTimeout(() => {
+        callback();
+        section.classList.remove("fading");
+      }, 150);
+    }
+
+    function selectNode(nodeId, el, pushState = true) {
       const meta = DIAGRAM_DATA.nodes[nodeId];
       if (!meta) return;
 
       if (selectedEl) selectedEl.classList.remove("selected");
       el.classList.add("selected");
       selectedEl = el;
+      selectedNodeId = nodeId;
 
-      const section = document.getElementById("detail-section");
-      section.innerHTML = renderNodeCard(nodeId, meta);
-      highlightAll(section);
+      // Update breadcrumbs
+      document.body.classList.add("has-selection");
+      document.getElementById("header-node").textContent = meta.title;
 
-      section.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Update URL hash
+      if (pushState) {
+        history.pushState(null, "", "#" + nodeId);
+      }
+
+      transitionContent(() => {
+        const section = document.getElementById("detail-section");
+        section.innerHTML = renderNodeCard(nodeId, meta);
+        highlightAll(section);
+        attachCopyButtons(section);
+      });
+
     }
 
-    function deselectAll() {
+    function deselectAll(skipHistory) {
       if (selectedEl) {
         selectedEl.classList.remove("selected");
         selectedEl = null;
       }
-      renderAllNodes();
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      selectedNodeId = null;
+
+      // Update breadcrumbs
+      document.body.classList.remove("has-selection");
+      document.getElementById("header-node").textContent = "";
+
+      // Clear hash
+      if (!skipHistory) {
+        history.pushState(null, "", window.location.pathname);
+      }
+
+      transitionContent(() => {
+        renderAllNodes();
+      });
     }
 
     function escapeText(s) {
