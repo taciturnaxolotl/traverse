@@ -19,4 +19,6 @@ export interface WalkthroughDiagram {
 
 export interface TraverseConfig {
   shareServerUrl: string;
+  port: number;
+  mode: "local" | "server";
 }

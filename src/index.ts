@@ -7,12 +7,10 @@ import { initDb, loadAllDiagrams, saveDiagram, deleteDiagramFromDb, generateId, 
 import { generateOgImage } from "./og.ts";
 import { loadConfig } from "./config.ts";
 
-const PORT = parseInt(process.env.TRAVERSE_PORT || "4173", 10);
-const MODE = (process.env.TRAVERSE_MODE || "local") as "local" | "server";
-const GIT_HASH = await Bun.$`git rev-parse --short HEAD`.text().then(s => s.trim()).catch(() => "dev");
-
-// Load config and init persistence
 const config = loadConfig();
+const PORT = config.port;
+const MODE = config.mode;
+const GIT_HASH = await Bun.$`git rev-parse --short HEAD`.text().then(s => s.trim()).catch(() => "dev");
 initDb();
 
 // Load persisted diagrams

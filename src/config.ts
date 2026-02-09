@@ -2,7 +2,11 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import type { TraverseConfig } from "./types.ts";
 
-const DEFAULT_SHARE_URL = "https://traverse.dunkirk.sh";
+const DEFAULTS: TraverseConfig = {
+  shareServerUrl: "https://traverse.dunkirk.sh",
+  port: 4173,
+  mode: "local",
+};
 
 function getConfigDir(): string {
   const platform = process.platform;
@@ -14,19 +18,20 @@ function getConfigDir(): string {
 }
 
 export function loadConfig(): TraverseConfig {
-  if (process.env.TRAVERSE_SHARE_URL) {
-    return { shareServerUrl: process.env.TRAVERSE_SHARE_URL };
-  }
+  let fileConfig: Partial<TraverseConfig> = {};
 
   const configPath = join(getConfigDir(), "config.json");
-
   try {
     const text = require("node:fs").readFileSync(configPath, "utf-8");
-    const parsed = JSON.parse(text);
-    return {
-      shareServerUrl: parsed.shareServerUrl || DEFAULT_SHARE_URL,
-    };
+    fileConfig = JSON.parse(text);
   } catch {
-    return { shareServerUrl: DEFAULT_SHARE_URL };
+    // no config file, use defaults
   }
+
+  // Env vars override config file, config file overrides defaults
+  return {
+    shareServerUrl: process.env.TRAVERSE_SHARE_URL || fileConfig.shareServerUrl || DEFAULTS.shareServerUrl,
+    port: parseInt(process.env.TRAVERSE_PORT || String(fileConfig.port || DEFAULTS.port), 10),
+    mode: (process.env.TRAVERSE_MODE || fileConfig.mode || DEFAULTS.mode) as "local" | "server",
+  };
 }
