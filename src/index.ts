@@ -378,7 +378,7 @@ function generateLocalIndexHTML(diagrams: Map<string, WalkthroughDiagram>, gitHa
     }
     .diagram-item {
       display: flex; flex-direction: column; gap: 10px;
-      padding: 16px; border: 1px solid var(--border);
+      padding: 16px 32px 16px 16px; border: 1px solid var(--border);
       border-radius: 8px; text-decoration: none; color: var(--text);
       transition: border-color 0.15s, background 0.15s;
       flex: 1;
