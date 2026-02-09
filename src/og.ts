@@ -44,14 +44,14 @@ export async function generateOgImage(
           fontFamily: "Inter",
         },
         children: [
-          // Top: Traverse label
+          // Top: Traverse label + node count
           {
             type: "div",
             props: {
               style: {
                 display: "flex",
                 alignItems: "center",
-                gap: "10px",
+                justifyContent: "space-between",
               },
               children: [
                 {
@@ -65,6 +65,16 @@ export async function generateOgImage(
                       textTransform: "uppercase" as const,
                     },
                     children: "Traverse",
+                  },
+                },
+                {
+                  type: "div",
+                  props: {
+                    style: {
+                      fontSize: "16px",
+                      color: "#666",
+                    },
+                    children: `${nodeCount} node${nodeCount !== 1 ? "s" : ""}`,
                   },
                 },
               ],
@@ -99,70 +109,45 @@ export async function generateOgImage(
               ],
             },
           },
-          // Bottom: Node pills + count
+          // Bottom: Node pills
           {
             type: "div",
             props: {
               style: {
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "16px",
+                flexWrap: "wrap",
+                gap: "8px",
               },
               children: [
-                {
+                ...displayNodes.map((name) => ({
                   type: "div",
                   props: {
                     style: {
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "8px",
-                      flex: 1,
+                      fontSize: "14px",
+                      color: "#a3a3a3",
+                      backgroundColor: "#1c1c1e",
+                      padding: "4px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid #262626",
                     },
-                    children: [
-                      ...displayNodes.map((name) => ({
+                    children: name,
+                  },
+                })),
+                ...(extra > 0
+                  ? [
+                      {
                         type: "div",
                         props: {
                           style: {
                             fontSize: "14px",
-                            color: "#a3a3a3",
-                            backgroundColor: "#1c1c1e",
-                            padding: "4px 12px",
-                            borderRadius: "6px",
-                            border: "1px solid #262626",
+                            color: "#666",
+                            padding: "4px 8px",
                           },
-                          children: name,
+                          children: `+${extra} more`,
                         },
-                      })),
-                      ...(extra > 0
-                        ? [
-                            {
-                              type: "div",
-                              props: {
-                                style: {
-                                  fontSize: "14px",
-                                  color: "#666",
-                                  padding: "4px 8px",
-                                },
-                                children: `+${extra} more`,
-                              },
-                            },
-                          ]
-                        : []),
-                    ],
-                  },
-                },
-                {
-                  type: "div",
-                  props: {
-                    style: {
-                      fontSize: "16px",
-                      color: "#666",
-                      flexShrink: 0,
-                    },
-                    children: `${nodeCount} node${nodeCount !== 1 ? "s" : ""}`,
-                  },
-                },
+                      },
+                    ]
+                  : []),
               ],
             },
           },
