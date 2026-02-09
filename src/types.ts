@@ -8,7 +8,6 @@ export interface NodeMetadata {
   description: string;
   links?: NodeLink[];
   codeSnippet?: string;
-  threadID?: string;
 }
 
 export interface WalkthroughDiagram {

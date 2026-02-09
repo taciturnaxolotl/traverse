@@ -59,44 +59,34 @@ const server = new McpServer({
 });
 
 const nodeMetadataSchema = z.object({
-  title: z.string().describe("Display name for the node"),
-  description: z
-    .string()
-    .describe("Detailed markdown explanation of this component"),
+  title: z.string(),
+  description: z.string(),
   links: z
-    .array(
-      z.object({
-        label: z.string().describe("Display text, e.g. src/auth.ts"),
-        url: z.string().describe("File path or URL"),
-      }),
-    )
-    .optional()
-    .describe("Related files or documentation"),
-  codeSnippet: z.string().optional().describe("Optional code example"),
-  threadID: z
-    .string()
-    .optional()
-    .describe("Optional link to deeper exploration thread"),
+    .array(z.object({ label: z.string(), url: z.string() }))
+    .optional(),
+  codeSnippet: z.string().optional(),
 });
 
 server.registerTool("walkthrough_diagram", {
   title: "Walkthrough Diagram",
-  description:
-    "Render an interactive Mermaid diagram where users can click nodes to see detailed information about each component. Use plain text labels in Mermaid code, no HTML tags or custom styling.",
+  description: `Render an interactive Mermaid diagram where users can click nodes to see details.
+
+BEFORE calling this tool, deeply explore the codebase:
+1. Use search/read tools to find key files, entry points, and architecture patterns
+2. Trace execution paths and data flow between components
+3. Read source files — don't guess from filenames
+
+Then build the diagram:
+- Use \`flowchart TB\` with plain text labels, no HTML or custom styling
+- 5-12 nodes at the right abstraction level (not too granular, not too high-level)
+- Node keys must match Mermaid node IDs exactly
+- Descriptions: 2-3 paragraphs of markdown per node. Write for someone who has never seen this codebase — explain what the component does, how it works, and why it matters. Use \`code spans\` for identifiers and markdown headers to organize longer explanations
+- Links: include file:line references from your exploration
+- Code snippets: key excerpts (under 15 lines) showing the most important or representative code`,
   inputSchema: z.object({
-    code: z
-      .string()
-      .describe(
-        "Mermaid diagram code. Use plain text labels, no HTML tags. No custom styling/colors.",
-      ),
-    summary: z
-      .string()
-      .describe("One-sentence summary of what the diagram illustrates"),
-    nodes: z
-      .record(z.string(), nodeMetadataSchema)
-      .describe(
-        "Metadata for clickable nodes, keyed by node ID from mermaid code",
-      ),
+    code: z.string(),
+    summary: z.string(),
+    nodes: z.record(z.string(), nodeMetadataSchema),
   }),
 }, async ({ code, summary, nodes }) => {
   const id = String(++diagramCounter);

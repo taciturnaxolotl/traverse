@@ -1,7 +1,7 @@
 import type { WalkthroughDiagram } from "./types.ts";
 
 export function generateViewerHTML(diagram: WalkthroughDiagram): string {
-  const diagramJSON = JSON.stringify(diagram);
+  const diagramJSON = JSON.stringify(diagram).replace(/<\//g, "<\\/");
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -258,20 +258,19 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
     .diagram-section .node { cursor: pointer; }
 
     .diagram-section .node:hover :is(rect, circle, ellipse, polygon, path) {
-      filter: brightness(1.12) !important;
+      fill: var(--code-bg) !important;
+      stroke-width: 2px !important;
     }
 
     .diagram-section .node.selected :is(rect, circle, ellipse, polygon, path) {
-      filter: brightness(1.2) !important;
-      stroke: var(--text-muted) !important;
-      stroke-width: 1.5px !important;
+      fill: var(--code-bg) !important;
+      stroke-width: 2.5px !important;
     }
 
     /* Edge hover */
     .diagram-section .node:hover ~ .edgePath path,
     .diagram-section .edgePath:hover path {
-      stroke-width: 3px;
-      filter: brightness(1.2);
+      stroke-width: 2.5px;
     }
 
     /* Highlight pulse animation */
@@ -279,8 +278,8 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       animation: node-highlight-pulse 0.5s ease-in-out 3;
     }
     @keyframes node-highlight-pulse {
-      0%, 100% { filter: brightness(1); }
-      50% { filter: brightness(1.3) drop-shadow(0 0 8px var(--text)); }
+      0%, 100% { stroke-width: 1px; }
+      50% { stroke-width: 3px; }
     }
 
     /* ERD: don't apply hover/selected effects to individual row cells */
@@ -425,6 +424,9 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
 
   <script type="module">
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    import elkLayouts from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0/dist/mermaid-layout-elk.esm.min.mjs";
+
+    mermaid.registerLayoutLoaders(elkLayouts);
 
     const DIAGRAM_DATA = ${diagramJSON};
 
@@ -440,7 +442,8 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       await mermaid.initialize({
         startOnLoad: true,
         theme: "base",
-        flowchart: { useMaxWidth: false, htmlLabels: true, curve: "monotoneY", nodeSpacing: 50, rankSpacing: 50 },
+        layout: "elk",
+        flowchart: { useMaxWidth: false, htmlLabels: true, nodeSpacing: 24, rankSpacing: 40 },
         securityLevel: "loose",
       });
 
