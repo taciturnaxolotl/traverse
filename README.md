@@ -1,78 +1,70 @@
 # traverse
 
-interactive code walkthrough diagrams via MCP. share them with anyone.
+[![the diagram view](https://l4.dunkirk.sh/i/eAqE3K4HnppN.webp)](https://traverse.dunkirk.sh/diagram/6121f05c-a5ef-4ecf-8ffc-02534c5e767c)
 
-The canonical repo for this is hosted on tangled over at [`dunkirk.sh/traverse`](https://tangled.org/@dunkirk.sh/traverse)
+One of my favorite features about [amp](https://ampcode.com) is their walkthrough feature. It runs a sub agent which goes and breaks your repo into parts and then sends it up to amp's services to get rendered into a nice web page! I got curious and ended up dumping the tool prompt for both the walkthrough subagent and the tool prompt that generates the diagram.
 
-## try it now
+Turns out they are using mermaid syntax with ids on each node that are linked to a json object that has the summary in md of each section. Looking into their web ui rendering they have actually designed their own mermaid renderer likely to get better routing with the paths. We can get amazingly close to that with regular mermaid still and that is what this project is!
 
-```sh
-bunx @taciturnaxolotl/traverse
-```
+This is a mcp server that also launches a web server in the background. You can hook this into whatever ai tool that you want that supports mcp (which is north of 80% of coding tools at this point if not nearing 100%) and start generating walkthroughs! It will initally give you a local url but if you want to share it with others then you can use the share button in the top corner of the page and it will by default share it to my hosted instance at [`traverse.dunkirk.sh`](https://traverse.dunkirk.sh) but if you configure the json settings or add an env variable you can point it to your own selfhosted instance!
 
-requires [bun](https://bun.sh). runs an MCP server on stdio and a web server on `localhost:4173`.
+## let's try it!
 
-## setup
-
-add to your MCP client:
-
-**claude code:**
+The mcp server must be run with bun since it uses the `Bun.serve` api extensively. If you haven't tried bun yet I would highly recommend it!
 
 ```sh
-claude mcp add traverse -- bunx @taciturnaxolotl/traverse
+bunx @taciturnaxolotl/traverse@latest
 ```
 
-**claude desktop** — add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+By default this runs an MCP server on stdio and a web server on `localhost:4173`.
+
+### I want this in my agent of choice!
+
+For claude code they have made this fairly easy:
+
+```sh
+claude mcp add traverse -- bunx @taciturnaxolotl/traverse@latest
+```
+
+For claude desktop (on mac) you can add the following to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "traverse": {
       "command": "bunx",
-      "args": ["@taciturnaxolotl/traverse"]
+      "args": ["@taciturnaxolotl/traverse@latest"]
     }
   }
 }
 ```
 
-**other MCP clients** — same JSON config, wherever your client reads `.mcp.json` or equivalent.
+For other agents its the same JSON config typically.
 
-your AI calls the `walkthrough_diagram` tool with mermaid code + node descriptions, and you get a clickable diagram in your browser.
+## Config
 
-diagrams persist to sqlite at `~/Library/Application Support/traverse/traverse.db` (macOS) or `$XDG_DATA_HOME/traverse/traverse.db` (linux). override with `TRAVERSE_DATA_DIR`.
+### json config
 
-## sharing
-
-click the share button on any diagram to upload it to `traverse.dunkirk.sh` and copy a public link.
-
-configure the share server in `~/Library/Application Support/traverse/config.json`:
+On macos edit/create `~/Library/Application Support/traverse/config.json`. If you are on Linux then `~/.config/traverse/config.json` (or `$XDG_CONFIG_HOME/traverse/config.json`)
 
 ```json
 {
-  "shareServerUrl": "https://traverse.dunkirk.sh"
+  "shareServerUrl": "https://traverse.dunkirk.sh",
+  "port": 4173,
+  "mode": "local"
 }
 ```
 
-or set `TRAVERSE_SHARE_URL`.
+### env vars
 
-## server mode
+| var                  | default                       | description                                |
+| -------------------- | ----------------------------- | ------------------------------------------ |
+| `TRAVERSE_PORT`      | `4173`                        | web server port                            |
+| `TRAVERSE_MODE`      | `local`                       | `local` (mcp + web) or `server` (web only) |
+| `TRAVERSE_SHARE_URL` | `https://traverse.dunkirk.sh` | share server url                           |
+| `TRAVERSE_DATA_DIR`  | platform default              | sqlite db location                         |
 
-run your own share server:
-
-```sh
-TRAVERSE_MODE=server bun run src/index.ts
-```
-
-accepts `POST /api/diagrams` with a diagram JSON body, returns `{ id, url }`.
-
-## env vars
-
-| var | default | description |
-|-----|---------|-------------|
-| `TRAVERSE_PORT` | `4173` | web server port |
-| `TRAVERSE_MODE` | `local` | `local` (mcp + web) or `server` (web only) |
-| `TRAVERSE_SHARE_URL` | `https://traverse.dunkirk.sh` | share server url |
-| `TRAVERSE_DATA_DIR` | platform default | sqlite db location |
+The canonical repo for this is hosted on tangled over at [`dunkirk.sh/traverse`](https://tangled.org/@dunkirk.sh/traverse)
 
 <p align="center">
     <img src="https://raw.githubusercontent.com/taciturnaxolotl/carriage/main/.github/images/line-break.svg" />
