@@ -31,6 +31,12 @@ Bun.serve({
       });
     }
 
+    if (url.pathname === "/icon.svg") {
+      return new Response(Bun.file(import.meta.dir + "/../icon.svg"), {
+        headers: { "Content-Type": "image/svg+xml" },
+      });
+    }
+
     // List available diagrams
     if (url.pathname === "/") {
       return new Response(generateIndexHTML(diagrams), {
@@ -109,7 +115,7 @@ function generate404HTML(title: string, message: string): string {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Traverse — ${escapeHTML(title)}</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%232563eb'/><path d='M10 12h12M10 16h12M10 20h12' stroke='white' stroke-width='2' stroke-linecap='round'/></svg>" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -184,7 +190,7 @@ function generateIndexHTML(diagrams: Map<string, WalkthroughDiagram>): string {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Traverse</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%232563eb'/><path d='M10 12h12M10 16h12M10 20h12' stroke='white' stroke-width='2' stroke-linecap='round'/></svg>" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -247,6 +253,13 @@ function generateIndexHTML(diagrams: Map<string, WalkthroughDiagram>): string {
       background: var(--code-bg); padding: 2px 6px;
       border-radius: 3px; font-size: 12px;
     }
+    .site-footer {
+      padding: 32px 20px; text-align: center;
+      font-size: 13px; color: var(--text-muted);
+    }
+    .site-footer .heart { color: #e25555; }
+    .site-footer a { color: var(--text); text-decoration: none; }
+    .site-footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -255,6 +268,9 @@ function generateIndexHTML(diagrams: Map<string, WalkthroughDiagram>): string {
     <p>Interactive code walkthrough diagrams</p>
   </div>
   ${content}
+  <footer class="site-footer">
+    Made with <span class="heart">&hearts;</span> by <a href="https://dunkirk.sh">Kieran Klukas</a> &middot; <a href="https://github.com/taciturnaxolotl/traverse">GitHub</a>
+  </footer>
 </body>
 </html>`;
 }

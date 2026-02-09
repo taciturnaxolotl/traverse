@@ -9,7 +9,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Traverse — ${escapeHTML(diagram.summary)}</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%232563eb'/><path d='M10 12h12M10 16h12M10 20h12' stroke='white' stroke-width='2' stroke-linecap='round'/></svg>" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css" id="hljs-dark" disabled />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github.min.css" id="hljs-light" />
   <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
@@ -82,6 +82,11 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       font-size: 11px;
       letter-spacing: 0.05em;
       flex-shrink: 0;
+      transition: color 0.15s;
+    }
+
+    .summary-bar .label:hover {
+      color: var(--text);
     }
 
     .summary-bar .sep {
@@ -121,6 +126,10 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .diagram-wrap {
+      padding: 32px 32px 0;
     }
 
     .diagram-section {
@@ -505,6 +514,22 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       border-color: #16a34a;
       opacity: 1;
     }
+
+    .site-footer {
+      padding: 32px 20px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .site-footer .heart { color: #e25555; }
+
+    .site-footer a {
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .site-footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -516,13 +541,19 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
     <span class="header-node" id="header-node"></span>
   </div>
 
-  <div class="content-wrap">
+  <div class="diagram-wrap">
     <div class="diagram-section">
       <pre class="mermaid">${escapeHTML(diagram.code)}</pre>
     </div>
+  </div>
 
+  <div class="content-wrap">
     <div id="detail-section"></div>
   </div>
+
+  <footer class="site-footer">
+    Made with <span class="heart">&hearts;</span> by <a href="https://dunkirk.sh">Kieran Klukas</a> &middot; <a href="https://github.com/taciturnaxolotl/traverse">GitHub</a>
+  </footer>
 
   <script type="module">
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
