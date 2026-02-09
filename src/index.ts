@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 import { generateViewerHTML } from "./template.ts";
 import type { WalkthroughDiagram } from "./types.ts";
 import { initDb, loadAllDiagrams, saveDiagram, deleteDiagramFromDb, generateId, getSharedUrl, saveSharedUrl } from "./storage.ts";
-import { generateOgImage } from "./og.ts";
+import { generateOgImage, generateIndexOgImage } from "./og.ts";
 import { loadConfig } from "./config.ts";
 
 const config = loadConfig();
@@ -153,11 +153,22 @@ try {
         });
       }
 
+      // Index OG image
+      if (url.pathname === "/og.png") {
+        const png = await generateIndexOgImage(MODE, diagrams.size);
+        return new Response(png, {
+          headers: {
+            "Content-Type": "image/png",
+            "Cache-Control": "public, max-age=3600",
+          },
+        });
+      }
+
       // List available diagrams
       if (url.pathname === "/") {
         const html = MODE === "server"
-          ? generateServerIndexHTML(diagrams.size, VERSION)
-          : generateLocalIndexHTML(diagrams, VERSION);
+          ? generateServerIndexHTML(diagrams.size, VERSION, url.origin)
+          : generateLocalIndexHTML(diagrams, VERSION, url.origin);
         return new Response(html, {
           headers: { "Content-Type": "text/html; charset=utf-8" },
         });
@@ -305,7 +316,7 @@ function generate404HTML(title: string, message: string): string {
 </html>`;
 }
 
-function generateLocalIndexHTML(diagrams: Map<string, WalkthroughDiagram>, gitHash: string): string {
+function generateLocalIndexHTML(diagrams: Map<string, WalkthroughDiagram>, gitHash: string, baseUrl: string): string {
   const items = [...diagrams.entries()]
     .map(
       ([id, d]) => {
@@ -346,6 +357,7 @@ function generateLocalIndexHTML(diagrams: Map<string, WalkthroughDiagram>, gitHa
       </div>`
     : `<div class="diagram-list">${items}</div>`;
 
+  const diagramCount = diagrams.size;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -353,6 +365,14 @@ function generateLocalIndexHTML(diagrams: Map<string, WalkthroughDiagram>, gitHa
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Traverse</title>
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Traverse" />
+  <meta property="og:description" content="Interactive code walkthrough diagrams. ${diagramCount} diagram${diagramCount !== 1 ? "s" : ""}." />
+  <meta property="og:image" content="${escapeHTML(baseUrl)}/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Traverse" />
+  <meta name="twitter:description" content="Interactive code walkthrough diagrams." />
+  <meta name="twitter:image" content="${escapeHTML(baseUrl)}/og.png" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -511,7 +531,7 @@ function generateLocalIndexHTML(diagrams: Map<string, WalkthroughDiagram>, gitHa
 </html>`;
 }
 
-function generateServerIndexHTML(diagramCount: number, gitHash: string): string {
+function generateServerIndexHTML(diagramCount: number, gitHash: string, baseUrl: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -519,6 +539,14 @@ function generateServerIndexHTML(diagramCount: number, gitHash: string): string 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Traverse</title>
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Traverse" />
+  <meta property="og:description" content="Interactive code walkthrough diagrams, shareable with anyone. ${diagramCount} diagram${diagramCount !== 1 ? "s" : ""} shared." />
+  <meta property="og:image" content="${escapeHTML(baseUrl)}/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Traverse" />
+  <meta name="twitter:description" content="Interactive code walkthrough diagrams, shareable with anyone." />
+  <meta name="twitter:image" content="${escapeHTML(baseUrl)}/og.png" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {

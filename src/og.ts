@@ -16,6 +16,114 @@ await initWasm(Bun.file(wasmPath).arrayBuffer());
 // Cache generated images by diagram ID
 const cache = new Map<string, Buffer>();
 
+export async function generateIndexOgImage(
+  mode: "local" | "server",
+  diagramCount: number,
+): Promise<Buffer> {
+  const cacheKey = `__index_${mode}_${diagramCount}`;
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
+
+  const subtitle = mode === "server"
+    ? `${diagramCount} diagram${diagramCount !== 1 ? "s" : ""} shared`
+    : `${diagramCount} diagram${diagramCount !== 1 ? "s" : ""}`;
+
+  const tagline = mode === "server"
+    ? "Interactive code walkthrough diagrams, shareable with anyone."
+    : "Interactive code walkthrough diagrams";
+
+  const svg = await satori(
+    {
+      type: "div",
+      props: {
+        style: {
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "60px",
+          backgroundColor: "#0a0a0a",
+          color: "#e5e5e5",
+          fontFamily: "Inter",
+        },
+        children: [
+          {
+            type: "div",
+            props: {
+              style: {
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "20px",
+              },
+              children: [
+                {
+                  type: "div",
+                  props: {
+                    style: {
+                      fontSize: "80px",
+                      fontWeight: 700,
+                      color: "#e5e5e5",
+                    },
+                    children: "Traverse",
+                  },
+                },
+                {
+                  type: "div",
+                  props: {
+                    style: {
+                      fontSize: "32px",
+                      color: "#a3a3a3",
+                      textAlign: "center",
+                    },
+                    children: tagline,
+                  },
+                },
+                {
+                  type: "div",
+                  props: {
+                    style: {
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginTop: "16px",
+                      fontSize: "24px",
+                      color: "#a3a3a3",
+                      backgroundColor: "#1c1c1e",
+                      padding: "10px 24px",
+                      borderRadius: "8px",
+                      border: "1px solid #262626",
+                    },
+                    children: subtitle,
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      width: 1200,
+      height: 630,
+      fonts: [
+        { name: "Inter", data: interRegular, weight: 400, style: "normal" as const },
+        { name: "Inter", data: interBold, weight: 700, style: "normal" as const },
+      ],
+    },
+  );
+
+  const resvg = new Resvg(svg, {
+    fitTo: { mode: "width", value: 1200 },
+  });
+  const png = Buffer.from(resvg.render().asPng());
+
+  cache.set(cacheKey, png);
+  return png;
+}
+
 export async function generateOgImage(
   id: string,
   summary: string,
