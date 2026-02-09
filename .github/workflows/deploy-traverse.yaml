@@ -1,0 +1,66 @@
+name: Deploy Traverse
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          use-cache: "true"
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "StrictHostKeyChecking no" >> ~/.ssh/config
+
+      - name: Deploy to server
+        run: |
+          ssh traverse@terebithia << 'EOF'
+            cd /var/lib/traverse/app
+            git fetch --all
+            git reset --hard origin/main
+            bun install
+            sudo /run/current-system/sw/bin/systemctl restart traverse.service
+          EOF
+
+      - name: Wait for service to start
+        run: sleep 10
+
+      - name: Health check
+        run: |
+          HEALTH_URL="https://traverse.dunkirk.sh"
+          MAX_RETRIES=6
+          RETRY_DELAY=5
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Health check attempt $i/$MAX_RETRIES..."
+
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Service is healthy"
+              exit 0
+            fi
+
+            echo "❌ Health check failed with HTTP $HTTP_CODE"
+
+            if [ $i -lt $MAX_RETRIES ]; then
+              echo "Retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Health check failed after $MAX_RETRIES attempts"
+          exit 1
