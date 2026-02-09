@@ -23,6 +23,9 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.26.0"
+    "@fontsource/inter": "^5.2.8",
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@resvg/resvg-wasm": "^2.6.2",
+    "satori": "^0.19.1"
   }
 }

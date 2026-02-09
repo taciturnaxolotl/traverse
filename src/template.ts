@@ -5,11 +5,12 @@ interface ViewerOptions {
   shareServerUrl?: string;
   diagramId?: string;
   existingShareUrl?: string;
+  baseUrl?: string;
 }
 
 export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string = "dev", projectRoot: string = "", options: ViewerOptions = {}): string {
   const diagramJSON = JSON.stringify(diagram).replace(/<\//g, "<\\/");
-  const { mode = "local", shareServerUrl = "", diagramId = "", existingShareUrl = "" } = options;
+  const { mode = "local", shareServerUrl = "", diagramId = "", existingShareUrl = "", baseUrl = "" } = options;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -17,7 +18,14 @@ export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Traverse — ${escapeHTML(diagram.summary)}</title>
-  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />${baseUrl && diagramId ? `
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="${escapeHTML(diagram.summary)}" />
+  <meta property="og:description" content="Interactive code walkthrough with ${Object.keys(diagram.nodes).length} nodes" />
+  <meta property="og:image" content="${escapeHTML(baseUrl)}/diagram/${escapeHTML(diagramId)}/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${escapeHTML(diagram.summary)}" />
+  <meta name="twitter:image" content="${escapeHTML(baseUrl)}/diagram/${escapeHTML(diagramId)}/og.png" />` : ""}
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css" id="hljs-dark" disabled />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github.min.css" id="hljs-light" />
   <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>

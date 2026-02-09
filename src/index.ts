@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 import { generateViewerHTML } from "./template.ts";
 import type { WalkthroughDiagram } from "./types.ts";
 import { initDb, loadAllDiagrams, saveDiagram, deleteDiagramFromDb, generateId, getSharedUrl, saveSharedUrl } from "./storage.ts";
+import { generateOgImage } from "./og.ts";
 import { loadConfig } from "./config.ts";
 
 const PORT = parseInt(process.env.TRAVERSE_PORT || "4173", 10);
@@ -25,6 +26,25 @@ try {
     port: PORT,
     async fetch(req) {
       const url = new URL(req.url);
+
+      // OG image route — must be matched before /diagram/:id
+      const ogMatch = url.pathname.match(/^\/diagram\/([\w-]+)\/og\.png$/);
+      if (ogMatch) {
+        const id = ogMatch[1]!;
+        const diagram = diagrams.get(id);
+        if (!diagram) {
+          return new Response("Not found", { status: 404 });
+        }
+        const nodeNames = Object.values(diagram.nodes).map(n => n.title);
+        const png = await generateOgImage(id, diagram.summary, nodeNames);
+        return new Response(png, {
+          headers: {
+            "Content-Type": "image/png",
+            "Cache-Control": "public, max-age=86400",
+          },
+        });
+      }
+
       const diagramMatch = url.pathname.match(/^\/diagram\/([\w-]+)$/);
 
       if (diagramMatch) {
@@ -42,6 +62,7 @@ try {
           shareServerUrl: config.shareServerUrl,
           diagramId: id,
           existingShareUrl: existingShareUrl ?? undefined,
+          baseUrl: url.origin,
         }), {
           headers: { "Content-Type": "text/html; charset=utf-8" },
         });
