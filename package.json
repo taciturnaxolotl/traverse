@@ -1,9 +1,17 @@
 {
-  "name": "traverse",
+  "name": "@taciturnaxolotl/traverse",
   "version": "0.1.0",
+  "description": "Interactive code walkthrough diagrams via MCP",
   "module": "src/index.ts",
   "type": "module",
-  "private": true,
+  "bin": {
+    "traverse": "./bin/traverse.js"
+  },
+  "files": [
+    "src",
+    "bin",
+    "icon.svg"
+  ],
   "scripts": {
     "start": "bun run src/index.ts",
     "dev": "bun --hot run src/index.ts"
