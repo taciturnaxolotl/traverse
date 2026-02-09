@@ -34,6 +34,13 @@ export function initDb(): Database {
       created_at TEXT
     )
   `);
+  db.run(`
+    CREATE TABLE IF NOT EXISTS shared_urls (
+      local_id TEXT PRIMARY KEY,
+      remote_url TEXT,
+      shared_at TEXT
+    )
+  `);
   return db;
 }
 
@@ -55,6 +62,18 @@ export function saveDiagram(id: string, diagram: WalkthroughDiagram): void {
 
 export function deleteDiagramFromDb(id: string): void {
   db.run("DELETE FROM diagrams WHERE id = ?", [id]);
+}
+
+export function getSharedUrl(localId: string): string | null {
+  const row = db.query("SELECT remote_url FROM shared_urls WHERE local_id = ?").get(localId) as { remote_url: string } | null;
+  return row?.remote_url ?? null;
+}
+
+export function saveSharedUrl(localId: string, remoteUrl: string): void {
+  db.run(
+    "INSERT OR REPLACE INTO shared_urls (local_id, remote_url, shared_at) VALUES (?, ?, ?)",
+    [localId, remoteUrl, new Date().toISOString()]
+  );
 }
 
 export function generateId(): string {

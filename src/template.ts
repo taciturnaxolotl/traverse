@@ -4,11 +4,12 @@ interface ViewerOptions {
   mode?: "local" | "server";
   shareServerUrl?: string;
   diagramId?: string;
+  existingShareUrl?: string;
 }
 
 export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string = "dev", projectRoot: string = "", options: ViewerOptions = {}): string {
   const diagramJSON = JSON.stringify(diagram).replace(/<\//g, "<\\/");
-  const { mode = "local", shareServerUrl = "", diagramId = "" } = options;
+  const { mode = "local", shareServerUrl = "", diagramId = "", existingShareUrl = "" } = options;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -648,6 +649,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string 
     const SHARE_SERVER_URL = ${JSON.stringify(shareServerUrl)};
     const DIAGRAM_ID = ${JSON.stringify(diagramId)};
     const VIEWER_MODE = ${JSON.stringify(mode)};
+    let EXISTING_SHARE_URL = ${JSON.stringify(existingShareUrl)};
 
     const COPY_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 11V3a1.5 1.5 0 011.5-1.5H11"/></svg>';
     const CHECK_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.5 3.5 6.5-7"/></svg>';
@@ -935,6 +937,18 @@ export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string 
       shareBtn.addEventListener("click", async () => {
         shareBtn.disabled = true;
         try {
+          // If we already have a shared URL, just copy it
+          if (EXISTING_SHARE_URL) {
+            await navigator.clipboard.writeText(EXISTING_SHARE_URL);
+            shareBtn.querySelector("span").textContent = "Copied link!";
+            shareBtn.classList.add("shared");
+            setTimeout(() => {
+              shareBtn.querySelector("span").textContent = "Share";
+              shareBtn.classList.remove("shared");
+            }, 2000);
+            return;
+          }
+
           const res = await fetch(SHARE_SERVER_URL + "/api/diagrams", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -943,6 +957,17 @@ export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string 
           if (!res.ok) throw new Error("Share failed");
           const data = await res.json();
           await navigator.clipboard.writeText(data.url);
+
+          // Save the shared URL locally so we don't re-upload next time
+          if (DIAGRAM_ID) {
+            fetch("/api/diagrams/" + DIAGRAM_ID + "/shared-url", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ url: data.url }),
+            }).catch(() => {}); // best-effort
+            EXISTING_SHARE_URL = data.url;
+          }
+
           shareBtn.querySelector("span").textContent = "Copied link!";
           shareBtn.classList.add("shared");
           setTimeout(() => {

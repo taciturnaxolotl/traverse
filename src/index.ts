@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod/v4";
 import { generateViewerHTML } from "./template.ts";
 import type { WalkthroughDiagram } from "./types.ts";
-import { initDb, loadAllDiagrams, saveDiagram, deleteDiagramFromDb, generateId } from "./storage.ts";
+import { initDb, loadAllDiagrams, saveDiagram, deleteDiagramFromDb, generateId, getSharedUrl, saveSharedUrl } from "./storage.ts";
 import { loadConfig } from "./config.ts";
 
 const PORT = parseInt(process.env.TRAVERSE_PORT || "4173", 10);
@@ -18,107 +18,139 @@ initDb();
 const diagrams = loadAllDiagrams();
 
 // --- Web server for serving interactive diagrams ---
-Bun.serve({
-  port: PORT,
-  async fetch(req) {
-    const url = new URL(req.url);
-    const diagramMatch = url.pathname.match(/^\/diagram\/([\w-]+)$/);
+let isClient = false;
 
-    if (diagramMatch) {
-      const id = diagramMatch[1]!;
-      const diagram = diagrams.get(id);
-      if (!diagram) {
-        return new Response(generate404HTML("Diagram not found", "This diagram doesn't exist or may have expired."), {
-          status: 404,
+try {
+  Bun.serve({
+    port: PORT,
+    async fetch(req) {
+      const url = new URL(req.url);
+      const diagramMatch = url.pathname.match(/^\/diagram\/([\w-]+)$/);
+
+      if (diagramMatch) {
+        const id = diagramMatch[1]!;
+        const diagram = diagrams.get(id);
+        if (!diagram) {
+          return new Response(generate404HTML("Diagram not found", "This diagram doesn't exist or may have expired."), {
+            status: 404,
+            headers: { "Content-Type": "text/html; charset=utf-8" },
+          });
+        }
+        const existingShareUrl = getSharedUrl(id);
+        return new Response(generateViewerHTML(diagram, GIT_HASH, process.cwd(), {
+          mode: MODE,
+          shareServerUrl: config.shareServerUrl,
+          diagramId: id,
+          existingShareUrl: existingShareUrl ?? undefined,
+        }), {
           headers: { "Content-Type": "text/html; charset=utf-8" },
         });
       }
-      return new Response(generateViewerHTML(diagram, GIT_HASH, process.cwd(), {
-        mode: MODE,
-        shareServerUrl: config.shareServerUrl,
-        diagramId: id,
-      }), {
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      });
-    }
 
-    // DELETE /api/diagrams/:id
-    const apiMatch = url.pathname.match(/^\/api\/diagrams\/([\w-]+)$/);
-    if (apiMatch && req.method === "DELETE") {
-      const id = apiMatch[1]!;
-      if (!diagrams.has(id)) {
-        return Response.json({ error: "not found" }, { status: 404 });
-      }
-      diagrams.delete(id);
-      deleteDiagramFromDb(id);
-      return Response.json({ ok: true, id });
-    }
-
-    // POST /api/diagrams (server mode: accept diagrams from remote)
-    if (url.pathname === "/api/diagrams" && req.method === "POST") {
-      if (MODE !== "server") {
-        return Response.json({ error: "POST only available in server mode" }, { status: 403 });
-      }
-      try {
-        const body = await req.json() as WalkthroughDiagram;
-        if (!body.code || !body.summary || !body.nodes) {
-          return Response.json({ error: "missing required fields: code, summary, nodes" }, { status: 400 });
+      // DELETE /api/diagrams/:id
+      const apiMatch = url.pathname.match(/^\/api\/diagrams\/([\w-]+)$/);
+      if (apiMatch && req.method === "DELETE") {
+        const id = apiMatch[1]!;
+        if (!diagrams.has(id)) {
+          return Response.json({ error: "not found" }, { status: 404 });
         }
-        const id = generateId();
-        const diagram: WalkthroughDiagram = {
-          code: body.code,
-          summary: body.summary,
-          nodes: body.nodes,
-          createdAt: new Date().toISOString(),
-        };
-        diagrams.set(id, diagram);
-        saveDiagram(id, diagram);
-        const diagramUrl = `${url.origin}/diagram/${id}`;
-        return Response.json({ id, url: diagramUrl }, {
-          status: 201,
+        diagrams.delete(id);
+        deleteDiagramFromDb(id);
+        return Response.json({ ok: true, id });
+      }
+
+      // POST /api/diagrams/:id/shared-url — save a shared URL for a local diagram
+      const sharedUrlMatch = url.pathname.match(/^\/api\/diagrams\/([\w-]+)\/shared-url$/);
+      if (sharedUrlMatch && req.method === "POST") {
+        const id = sharedUrlMatch[1]!;
+        try {
+          const body = await req.json() as { url: string };
+          if (!body.url) {
+            return Response.json({ error: "missing required field: url" }, { status: 400 });
+          }
+          saveSharedUrl(id, body.url);
+          return Response.json({ ok: true, id, url: body.url });
+        } catch {
+          return Response.json({ error: "invalid JSON body" }, { status: 400 });
+        }
+      }
+
+      // GET /api/diagrams/:id/shared-url — retrieve a stored shared URL
+      if (sharedUrlMatch && req.method === "GET") {
+        const id = sharedUrlMatch[1]!;
+        const sharedUrl = getSharedUrl(id);
+        if (!sharedUrl) {
+          return Response.json({ url: null });
+        }
+        return Response.json({ url: sharedUrl });
+      }
+
+      // POST /api/diagrams — accept diagrams from remote or sibling instances
+      if (url.pathname === "/api/diagrams" && req.method === "POST") {
+        try {
+          const body = await req.json() as WalkthroughDiagram;
+          if (!body.code || !body.summary || !body.nodes) {
+            return Response.json({ error: "missing required fields: code, summary, nodes" }, { status: 400 });
+          }
+          const id = generateId();
+          const diagram: WalkthroughDiagram = {
+            code: body.code,
+            summary: body.summary,
+            nodes: body.nodes,
+            createdAt: new Date().toISOString(),
+          };
+          diagrams.set(id, diagram);
+          saveDiagram(id, diagram);
+          const diagramUrl = `${url.origin}/diagram/${id}`;
+          return Response.json({ id, url: diagramUrl }, {
+            status: 201,
+            headers: {
+              "Access-Control-Allow-Origin": "*",
+            },
+          });
+        } catch {
+          return Response.json({ error: "invalid JSON body" }, { status: 400 });
+        }
+      }
+
+      // OPTIONS /api/diagrams — CORS preflight
+      if (url.pathname === "/api/diagrams" && req.method === "OPTIONS") {
+        return new Response(null, {
+          status: 204,
           headers: {
             "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
           },
         });
-      } catch {
-        return Response.json({ error: "invalid JSON body" }, { status: 400 });
       }
-    }
 
-    // OPTIONS /api/diagrams — CORS preflight
-    if (url.pathname === "/api/diagrams" && req.method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
-        },
-      });
-    }
+      if (url.pathname === "/icon.svg") {
+        return new Response(Bun.file(import.meta.dir + "/../icon.svg"), {
+          headers: { "Content-Type": "image/svg+xml" },
+        });
+      }
 
-    if (url.pathname === "/icon.svg") {
-      return new Response(Bun.file(import.meta.dir + "/../icon.svg"), {
-        headers: { "Content-Type": "image/svg+xml" },
-      });
-    }
+      // List available diagrams
+      if (url.pathname === "/") {
+        const html = MODE === "server"
+          ? generateServerIndexHTML(diagrams.size, GIT_HASH)
+          : generateLocalIndexHTML(diagrams, GIT_HASH);
+        return new Response(html, {
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
 
-    // List available diagrams
-    if (url.pathname === "/") {
-      const html = MODE === "server"
-        ? generateServerIndexHTML(diagrams.size, GIT_HASH)
-        : generateLocalIndexHTML(diagrams, GIT_HASH);
-      return new Response(html, {
+      return new Response(generate404HTML("Page not found", "There's nothing at this URL."), {
+        status: 404,
         headers: { "Content-Type": "text/html; charset=utf-8" },
       });
-    }
-
-    return new Response(generate404HTML("Page not found", "There's nothing at this URL."), {
-      status: 404,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
-  },
-});
+    },
+  });
+} catch {
+  isClient = true;
+  console.error(`Web server already running on port ${PORT}, running in client mode`);
+}
 
 // --- MCP Server (local mode only) ---
 if (MODE === "local") {
@@ -158,17 +190,34 @@ Then build the diagram:
       nodes: z.record(z.string(), nodeMetadataSchema),
     }),
   }, async ({ code, summary, nodes }) => {
-    const id = generateId();
-    const diagram: WalkthroughDiagram = {
-      code,
-      summary,
-      nodes,
-      createdAt: new Date().toISOString(),
-    };
-    diagrams.set(id, diagram);
-    saveDiagram(id, diagram);
+    let diagramUrl: string;
 
-    const diagramUrl = `http://localhost:${PORT}/diagram/${id}`;
+    if (isClient) {
+      // POST diagram to the existing web server instance
+      const res = await fetch(`http://localhost:${PORT}/api/diagrams`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, summary, nodes }),
+      });
+      if (!res.ok) {
+        return {
+          content: [{ type: "text", text: `Failed to send diagram to server: ${res.statusText}` }],
+        };
+      }
+      const data = await res.json() as { id: string; url: string };
+      diagramUrl = data.url;
+    } else {
+      const id = generateId();
+      const diagram: WalkthroughDiagram = {
+        code,
+        summary,
+        nodes,
+        createdAt: new Date().toISOString(),
+      };
+      diagrams.set(id, diagram);
+      saveDiagram(id, diagram);
+      diagramUrl = `http://localhost:${PORT}/diagram/${id}`;
+    }
 
     return {
       content: [
