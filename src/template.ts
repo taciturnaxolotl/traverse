@@ -643,7 +643,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string 
 
   <footer class="site-footer">
     <span>Made with &#x2764;&#xFE0F; by <a href="https://dunkirk.sh">Kieran Klukas</a></span>
-    <a class="hash" href="https://github.com/taciturnaxolotl/traverse/commit/${escapeHTML(gitHash)}">${escapeHTML(gitHash)}</a>
+    <a class="hash" href="https://github.com/taciturnaxolotl/traverse/${/^v\d+\./.test(gitHash) ? "releases/tag" : "commit"}/${escapeHTML(gitHash)}">${escapeHTML(gitHash)}</a>
   </footer>
 
   <script type="module">

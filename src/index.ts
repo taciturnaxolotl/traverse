@@ -10,7 +10,10 @@ import { loadConfig } from "./config.ts";
 const config = loadConfig();
 const PORT = config.port;
 const MODE = config.mode;
-const GIT_HASH = await Bun.$`git rev-parse --short HEAD`.text().then(s => s.trim()).catch(() => "dev");
+const VERSION = await Bun.$`git rev-parse --short HEAD`.text().then(s => s.trim()).catch(async () => {
+  const pkg = await Bun.file(import.meta.dir + "/../package.json").json();
+  return `v${pkg.version}`;
+});
 initDb();
 
 // Load persisted diagrams
@@ -55,7 +58,7 @@ try {
           });
         }
         const existingShareUrl = getSharedUrl(id);
-        return new Response(generateViewerHTML(diagram, GIT_HASH, process.cwd(), {
+        return new Response(generateViewerHTML(diagram, VERSION, process.cwd(), {
           mode: MODE,
           shareServerUrl: config.shareServerUrl,
           diagramId: id,
@@ -153,8 +156,8 @@ try {
       // List available diagrams
       if (url.pathname === "/") {
         const html = MODE === "server"
-          ? generateServerIndexHTML(diagrams.size, GIT_HASH)
-          : generateLocalIndexHTML(diagrams, GIT_HASH);
+          ? generateServerIndexHTML(diagrams.size, VERSION)
+          : generateLocalIndexHTML(diagrams, VERSION);
         return new Response(html, {
           headers: { "Content-Type": "text/html; charset=utf-8" },
         });
@@ -484,7 +487,7 @@ function generateLocalIndexHTML(diagrams: Map<string, WalkthroughDiagram>, gitHa
   </div>
   <footer class="site-footer">
     <span>Made with &#x2764;&#xFE0F; by <a href="https://dunkirk.sh">Kieran Klukas</a></span>
-    <a class="hash" href="https://github.com/taciturnaxolotl/traverse/commit/${escapeHTML(gitHash)}">${escapeHTML(gitHash)}</a>
+    <a class="hash" href="https://github.com/taciturnaxolotl/traverse/${/^v\d+\./.test(gitHash) ? "releases/tag" : "commit"}/${escapeHTML(gitHash)}">${escapeHTML(gitHash)}</a>
   </footer>
   <script>
     async function deleteDiagram(id, btn) {
@@ -596,7 +599,7 @@ function generateServerIndexHTML(diagramCount: number, gitHash: string): string 
   </div>
   <footer class="site-footer">
     <span>Made with &#x2764;&#xFE0F; by <a href="https://dunkirk.sh">Kieran Klukas</a></span>
-    <a class="hash" href="https://github.com/taciturnaxolotl/traverse/commit/${escapeHTML(gitHash)}">${escapeHTML(gitHash)}</a>
+    <a class="hash" href="https://github.com/taciturnaxolotl/traverse/${/^v\d+\./.test(gitHash) ? "releases/tag" : "commit"}/${escapeHTML(gitHash)}">${escapeHTML(gitHash)}</a>
   </footer>
 </body>
 </html>`;
