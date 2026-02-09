@@ -52,10 +52,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      min-height: 100vh;
     }
 
     .summary-bar {
@@ -64,7 +61,6 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       border-bottom: 1px solid var(--border);
       font-size: 14px;
       color: var(--text-muted);
-      flex-shrink: 0;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -78,135 +74,278 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       letter-spacing: 0.05em;
     }
 
-    .main {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    .diagram-container {
-      flex: 1;
-      overflow: auto;
+    .diagram-section {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 32px;
-      min-width: 0;
+      padding: 24px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
     }
 
-    .diagram-container pre.mermaid {
+    .diagram-section pre.mermaid {
       width: 100%;
     }
 
-    .diagram-container svg {
+    .diagram-section svg {
+      max-height: none !important;
+      height: auto !important;
       width: 100%;
-      height: auto;
     }
 
-    /* Make clickable nodes interactive */
-    .diagram-container .node { cursor: pointer; }
-    .diagram-container .node:hover rect,
-    .diagram-container .node:hover polygon,
-    .diagram-container .node:hover circle,
-    .diagram-container .node:hover .basic {
-      filter: brightness(0.92);
+    /* ── Force theme colors on all Mermaid elements ── */
+
+    /* Global mermaid label overrides */
+    .diagram-section .label {
+      font-family: inherit;
+      color: var(--text) !important;
+    }
+    .diagram-section .label text,
+    .diagram-section .label span {
+      fill: var(--text) !important;
+      color: var(--text) !important;
+    }
+    .diagram-section .cluster-label text,
+    .diagram-section .cluster-label span,
+    .diagram-section .cluster-label span p {
+      fill: var(--text) !important;
+      color: var(--text) !important;
+      background-color: transparent !important;
     }
 
-    .node.selected rect,
-    .node.selected polygon,
-    .node.selected circle,
-    .node.selected .basic {
-      stroke: var(--accent) !important;
-      stroke-width: 2.5px !important;
+    /* Flowchart nodes */
+    .diagram-section .node rect,
+    .diagram-section .node circle,
+    .diagram-section .node ellipse,
+    .diagram-section .node polygon,
+    .diagram-section .node path,
+    .diagram-section .node .label-container,
+    .diagram-section .node .label-container path,
+    .diagram-section .node g path {
+      fill: var(--bg) !important;
+      stroke: var(--text) !important;
+    }
+    .diagram-section .node .label,
+    .diagram-section .node .nodeLabel,
+    .diagram-section .node text,
+    .diagram-section .node foreignObject {
+      color: var(--text) !important;
+      fill: var(--text) !important;
+    }
+    .diagram-section .node foreignObject div,
+    .diagram-section .node foreignObject span,
+    .diagram-section .node foreignObject p {
+      color: var(--text) !important;
     }
 
-    .detail-panel {
-      width: 420px;
-      flex-shrink: 0;
-      border-left: 1px solid var(--border);
-      background: var(--bg-panel);
-      display: none;
-      flex-direction: column;
-      overflow: hidden;
+    /* Edge labels */
+    .diagram-section .edgeLabel,
+    .diagram-section .edgeLabel span,
+    .diagram-section .edgeLabel div,
+    .diagram-section .edgeLabel p,
+    .diagram-section .edgeLabel foreignObject,
+    .diagram-section .edgeLabel foreignObject *,
+    .diagram-section .edgeLabel text,
+    .diagram-section .edgeLabel tspan {
+      color: var(--text) !important;
+      fill: var(--text) !important;
+    }
+    .diagram-section .edgeLabel,
+    .diagram-section .edgeLabel p,
+    .diagram-section .edgeLabel span {
+      background-color: var(--bg) !important;
+    }
+    .diagram-section .edgeLabel rect,
+    .diagram-section .edgeLabel .labelBkg {
+      fill: var(--bg) !important;
+      opacity: 1 !important;
     }
 
-    .detail-panel.open {
-      display: flex;
+    /* Edge paths and arrows */
+    .diagram-section .edgePath path,
+    .diagram-section .flowchart-link,
+    .diagram-section path.path,
+    .diagram-section .edge-pattern-solid,
+    .diagram-section .edge-pattern-dotted,
+    .diagram-section .edge-pattern-dashed {
+      stroke: var(--text) !important;
+    }
+    .diagram-section marker path,
+    .diagram-section .arrowheadPath,
+    .diagram-section .arrowMarkerAbs path {
+      fill: var(--text) !important;
+      stroke: var(--text) !important;
     }
 
-    @media (max-width: 1300px) {
-      .main {
-        flex-direction: column;
-      }
-
-      .detail-panel {
-        width: 100%;
-        border-left: none;
-        border-top: 1px solid var(--border);
-        max-height: 50vh;
-      }
+    /* Subgraph/cluster styling */
+    .diagram-section .cluster rect,
+    .diagram-section .cluster-label,
+    .diagram-section g.cluster > rect {
+      fill: var(--bg-panel) !important;
+      stroke: var(--text) !important;
+    }
+    .diagram-section .cluster text,
+    .diagram-section .cluster-label text,
+    .diagram-section .cluster .nodeLabel {
+      fill: var(--text) !important;
+      color: var(--text) !important;
     }
 
-    .detail-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-shrink: 0;
+    /* ── Sequence diagram overrides ── */
+    .diagram-section rect.actor {
+      fill: var(--bg) !important;
+      stroke: var(--text) !important;
+    }
+    .diagram-section text.actor,
+    .diagram-section text.actor tspan,
+    .diagram-section .actor > tspan {
+      fill: var(--text) !important;
+      stroke: none !important;
+    }
+    .diagram-section .actor-man circle,
+    .diagram-section .actor-man line {
+      fill: var(--bg) !important;
+      stroke: var(--text) !important;
+    }
+    .diagram-section line.actor-line,
+    .diagram-section .actor-line {
+      stroke: var(--text) !important;
+    }
+    .diagram-section .sequenceNumber {
+      fill: var(--bg) !important;
+    }
+    .diagram-section .messageLine0,
+    .diagram-section .messageLine1 {
+      stroke: var(--text) !important;
+    }
+    .diagram-section .messageText {
+      fill: var(--text) !important;
+    }
+    .diagram-section .activation0,
+    .diagram-section .activation1,
+    .diagram-section .activation2 {
+      fill: var(--code-bg) !important;
+      stroke: var(--text) !important;
+    }
+    .diagram-section .labelBox {
+      fill: var(--bg-panel) !important;
+      stroke: var(--text) !important;
+    }
+    .diagram-section .labelText,
+    .diagram-section .loopText {
+      fill: var(--text) !important;
     }
 
-    .detail-header h2 {
+    /* ── ERD diagram overrides ── */
+    .diagram-section .entityBox {
+      fill: var(--bg-panel) !important;
+    }
+    .diagram-section .row-rect-odd path,
+    .diagram-section .row-rect-even path {
+      fill: var(--bg) !important;
+    }
+    .diagram-section .row-rect-even path {
+      fill: var(--code-bg) !important;
+    }
+    .diagram-section .relationshipLine path {
+      stroke: var(--text) !important;
+    }
+    .diagram-section .relationshipLabel {
+      fill: var(--text) !important;
+    }
+
+    /* ── Node interaction ── */
+    .diagram-section .node { cursor: pointer; }
+
+    .diagram-section .node:hover :is(rect, circle, ellipse, polygon, path) {
+      filter: brightness(1.12) !important;
+    }
+
+    .diagram-section .node.selected :is(rect, circle, ellipse, polygon, path) {
+      filter: brightness(1.2) !important;
+      stroke: var(--text-muted) !important;
+      stroke-width: 1.5px !important;
+    }
+
+    /* Edge hover */
+    .diagram-section .node:hover ~ .edgePath path,
+    .diagram-section .edgePath:hover path {
+      stroke-width: 3px;
+      filter: brightness(1.2);
+    }
+
+    /* Highlight pulse animation */
+    .diagram-section .node.highlighted :is(rect, circle, ellipse, polygon, path) {
+      animation: node-highlight-pulse 0.5s ease-in-out 3;
+    }
+    @keyframes node-highlight-pulse {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.3) drop-shadow(0 0 8px var(--text)); }
+    }
+
+    /* ERD: don't apply hover/selected effects to individual row cells */
+    .diagram-section .erDiagram .node:hover :is(.row-rect-odd, .row-rect-even) :is(path, rect, polygon),
+    .diagram-section .erDiagram .node.selected :is(.row-rect-odd, .row-rect-even) :is(path, rect, polygon) {
+      filter: none !important;
+      stroke: none !important;
+      stroke-width: 0 !important;
+    }
+
+    /* ── Content wrap ── */
+    .content-wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 20px;
+    }
+
+    /* ── Detail section ── */
+    .content-summary {
+      font-size: 20px;
+      font-weight: 600;
+      padding: 24px 0 0;
+    }
+
+    .node-card {
+      padding: 24px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .node-card:first-child {
+      border-top: none;
+    }
+
+    .node-card h3 {
       font-size: 16px;
       font-weight: 600;
+      margin-bottom: 12px;
     }
 
-    .close-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      padding: 4px;
-      border-radius: 4px;
-      font-size: 18px;
-      line-height: 1;
-      transition: color 0.15s;
-    }
-
-    .close-btn:hover { color: var(--text); }
-
-    .detail-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-    }
-
-    .detail-body .description {
+    .node-card .description {
       font-size: 14px;
       line-height: 1.65;
     }
 
-    .detail-body .description h1,
-    .detail-body .description h2,
-    .detail-body .description h3 {
+    .node-card .description h1,
+    .node-card .description h2,
+    .node-card .description h3 {
       margin-top: 16px;
       margin-bottom: 8px;
     }
 
-    .detail-body .description h1 { font-size: 18px; }
-    .detail-body .description h2 { font-size: 16px; }
-    .detail-body .description h3 { font-size: 14px; }
+    .node-card .description h1 { font-size: 18px; }
+    .node-card .description h2 { font-size: 16px; }
+    .node-card .description h3 { font-size: 14px; }
 
-    .detail-body .description p { margin-bottom: 12px; }
+    .node-card .description p { margin-bottom: 12px; }
 
-    .detail-body .description code {
+    .node-card .description code {
       background: var(--code-bg);
       padding: 2px 5px;
       border-radius: 3px;
       font-size: 13px;
     }
 
-    .detail-body .description pre {
+    .node-card .description pre {
       background: var(--code-bg);
       padding: 12px;
       border-radius: 6px;
@@ -214,18 +353,19 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       margin-bottom: 12px;
     }
 
-    .detail-body .description pre code {
+    .node-card .description pre code {
       background: none;
       padding: 0;
+      line-height: 1.625 !important;
     }
 
-    .detail-body .description ul,
-    .detail-body .description ol {
+    .node-card .description ul,
+    .node-card .description ol {
       margin-bottom: 12px;
       padding-left: 20px;
     }
 
-    .detail-body .description li { margin-bottom: 4px; }
+    .node-card .description li { margin-bottom: 4px; }
 
     .section-label {
       font-size: 11px;
@@ -267,14 +407,6 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       font-size: 13px;
       line-height: 1.5;
     }
-
-    /* empty state */
-    .empty-hint {
-      color: var(--text-muted);
-      font-size: 13px;
-      text-align: center;
-      padding: 40px 20px;
-    }
   </style>
 </head>
 <body>
@@ -283,20 +415,12 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
     <span>${escapeHTML(diagram.summary)}</span>
   </div>
 
-  <div class="main">
-    <div class="diagram-container">
+  <div class="content-wrap">
+    <div class="diagram-section">
       <pre class="mermaid">${escapeHTML(diagram.code)}</pre>
     </div>
 
-    <div class="detail-panel" id="detail-panel">
-      <div class="detail-header">
-        <h2 id="detail-title">Select a node</h2>
-        <button class="close-btn" id="close-btn" aria-label="Close panel">&times;</button>
-      </div>
-      <div class="detail-body" id="detail-body">
-        <div class="empty-hint">Click a node in the diagram to view details.</div>
-      </div>
-    </div>
+    <div id="detail-section"></div>
   </div>
 
   <script type="module">
@@ -313,11 +437,10 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", initTheme);
 
     async function init() {
-      const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       await mermaid.initialize({
         startOnLoad: true,
-        theme: dark ? "dark" : "default",
-        flowchart: { useMaxWidth: false, htmlLabels: true, curve: "basis" },
+        theme: "base",
+        flowchart: { useMaxWidth: false, htmlLabels: true, curve: "monotoneY", nodeSpacing: 50, rankSpacing: 50 },
         securityLevel: "loose",
       });
 
@@ -328,13 +451,14 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       requestAnimationFrame(() => {
         fitDiagram();
         attachClickHandlers();
+        renderAllNodes();
       });
 
       window.addEventListener("resize", fitDiagram);
     }
 
     function fitDiagram() {
-      const svg = document.querySelector(".diagram-container svg");
+      const svg = document.querySelector(".diagram-section svg");
       if (!svg) return;
 
       // Read the intrinsic size mermaid rendered
@@ -347,7 +471,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
     }
 
     function attachClickHandlers() {
-      const svg = document.querySelector(".diagram-container svg");
+      const svg = document.querySelector(".diagram-section svg");
       if (!svg) return;
 
       const nodeIds = Object.keys(DIAGRAM_DATA.nodes);
@@ -380,7 +504,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
 
       // Click outside to deselect
       document.addEventListener("click", (e) => {
-        if (!e.target.closest(".detail-panel") && !e.target.closest(".node")) {
+        if (!e.target.closest(".detail-section") && !e.target.closest(".node")) {
           deselectAll();
         }
       });
@@ -388,23 +512,10 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
 
     let selectedEl = null;
 
-    function selectNode(nodeId, el) {
-      const meta = DIAGRAM_DATA.nodes[nodeId];
-      if (!meta) return;
-
-      // Update selection styling
-      if (selectedEl) selectedEl.classList.remove("selected");
-      el.classList.add("selected");
-      selectedEl = el;
-
-      // Update panel
-      const panel = document.getElementById("detail-panel");
-      const title = document.getElementById("detail-title");
-      const body = document.getElementById("detail-body");
-
-      title.textContent = meta.title;
-
-      let html = '<div class="description">' + marked.parse(meta.description) + "</div>";
+    function renderNodeCard(nodeId, meta) {
+      let html = '<div class="node-card" data-card-id="' + escapeAttr(nodeId) + '">';
+      html += '<h3>' + escapeText(meta.title) + '</h3>';
+      html += '<div class="description">' + marked.parse(meta.description) + "</div>";
 
       if (meta.links && meta.links.length > 0) {
         html += '<div class="section-label">Related Files</div>';
@@ -420,14 +531,39 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
         html += '<div class="code-snippet"><pre><code>' + escapeText(meta.codeSnippet) + "</code></pre></div>";
       }
 
-      body.innerHTML = html;
+      html += '</div>';
+      return html;
+    }
 
-      // Highlight code blocks
-      body.querySelectorAll("pre code").forEach(block => {
+    function renderAllNodes() {
+      const section = document.getElementById("detail-section");
+      let html = '<h2 class="content-summary">' + escapeText(DIAGRAM_DATA.summary) + '</h2>';
+      for (const [nodeId, meta] of Object.entries(DIAGRAM_DATA.nodes)) {
+        html += renderNodeCard(nodeId, meta);
+      }
+      section.innerHTML = html;
+      highlightAll(section);
+    }
+
+    function highlightAll(container) {
+      container.querySelectorAll("pre code").forEach(block => {
         hljs.highlightElement(block);
       });
+    }
 
-      panel.classList.add("open");
+    function selectNode(nodeId, el) {
+      const meta = DIAGRAM_DATA.nodes[nodeId];
+      if (!meta) return;
+
+      if (selectedEl) selectedEl.classList.remove("selected");
+      el.classList.add("selected");
+      selectedEl = el;
+
+      const section = document.getElementById("detail-section");
+      section.innerHTML = renderNodeCard(nodeId, meta);
+      highlightAll(section);
+
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
     function deselectAll() {
@@ -435,10 +571,9 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
         selectedEl.classList.remove("selected");
         selectedEl = null;
       }
-      document.getElementById("detail-panel").classList.remove("open");
+      renderAllNodes();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
-
-    document.getElementById("close-btn").addEventListener("click", deselectAll);
 
     function escapeText(s) {
       const d = document.createElement("div");
