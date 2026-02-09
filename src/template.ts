@@ -549,6 +549,29 @@ export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string 
       color: var(--text-muted) !important;
       opacity: 0.6;
     }
+
+    @media (max-width: 640px) {
+      .diagram-wrap {
+        padding: 12px 8px 0;
+      }
+      .diagram-section {
+        padding: 12px;
+        overflow-x: auto;
+      }
+      .diagram-section svg {
+        min-width: 500px;
+        max-height: none;
+      }
+      .content-wrap {
+        padding: 20px 16px;
+      }
+      .summary-bar {
+        padding: 10px 12px;
+      }
+      .site-footer {
+        padding: 20px 12px;
+      }
+    }
   </style>
 </head>
 <body>
