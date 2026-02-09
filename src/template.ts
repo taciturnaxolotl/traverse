@@ -1,6 +1,6 @@
 import type { WalkthroughDiagram } from "./types.ts";
 
-export function generateViewerHTML(diagram: WalkthroughDiagram): string {
+export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string = "dev", projectRoot: string = ""): string {
   const diagramJSON = JSON.stringify(diagram).replace(/<\//g, "<\\/");
 
   return `<!DOCTYPE html>
@@ -56,6 +56,8 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
 
     /* ── Summary bar with breadcrumb ── */
@@ -77,11 +79,12 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
 
     .summary-bar .label {
       font-weight: 600;
-      color: var(--accent);
+      color: var(--text-muted);
       text-transform: uppercase;
       font-size: 11px;
       letter-spacing: 0.05em;
       flex-shrink: 0;
+      text-decoration: none;
       transition: color 0.15s;
     }
 
@@ -139,6 +142,12 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       padding: 24px;
       border: 1px solid var(--border);
       border-radius: 8px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .diagram-section.ready {
+      opacity: 1;
     }
 
     .diagram-section pre.mermaid {
@@ -364,6 +373,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       max-width: 720px;
       margin: 0 auto;
       padding: 32px 20px;
+      flex: 1;
     }
 
     /* ── Detail section ── */
@@ -459,7 +469,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
     }
 
     .links-list a {
-      color: var(--accent);
+      color: #5a7bc4;
       text-decoration: none;
       font-size: 13px;
       font-family: "SF Mono", "Fira Code", monospace;
@@ -467,7 +477,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       transition: color 0.15s;
     }
 
-    .links-list a:hover { color: var(--accent-hover); text-decoration: underline; }
+    .links-list a:hover { color: #7b9ad8; text-decoration: underline; }
 
     .code-snippet {
       margin-top: 12px;
@@ -517,9 +527,11 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
 
     .site-footer {
       padding: 32px 20px;
-      text-align: center;
       font-size: 13px;
       color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .site-footer .heart { color: #e25555; }
@@ -530,11 +542,18 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
     }
 
     .site-footer a:hover { text-decoration: underline; }
+
+    .site-footer .hash {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 11px;
+      color: var(--text-muted) !important;
+      opacity: 0.6;
+    }
   </style>
 </head>
 <body>
   <div class="summary-bar">
-    <a class="label" href="/" style="text-decoration:none;color:inherit">Traverse</a>
+    <a class="label" href="/">Traverse</a>
     <span class="sep">&rsaquo;</span>
     <span class="breadcrumb-title" id="breadcrumb-title">${escapeHTML(diagram.summary)}</span>
     <span class="sep header-sep">&rsaquo;</span>
@@ -552,7 +571,8 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
   </div>
 
   <footer class="site-footer">
-    Made with <span class="heart">&hearts;</span> by <a href="https://dunkirk.sh">Kieran Klukas</a> &middot; <a href="https://github.com/taciturnaxolotl/traverse">GitHub</a>
+    <span>Made with &#x2764;&#xFE0F; by <a href="https://dunkirk.sh">Kieran Klukas</a></span>
+    <a class="hash" href="https://github.com/taciturnaxolotl/traverse/commit/${escapeHTML(gitHash)}">${escapeHTML(gitHash)}</a>
   </footer>
 
   <script type="module">
@@ -562,6 +582,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
     mermaid.registerLayoutLoaders(elkLayouts);
 
     const DIAGRAM_DATA = ${diagramJSON};
+    const PROJECT_ROOT = ${JSON.stringify(projectRoot)};
 
     const COPY_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 11V3a1.5 1.5 0 011.5-1.5H11"/></svg>';
     const CHECK_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.5 3.5 6.5-7"/></svg>';
@@ -589,6 +610,7 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       // Set viewBox so the SVG scales to fit the container
       requestAnimationFrame(() => {
         fitDiagram();
+        document.querySelector(".diagram-section").classList.add("ready");
         attachClickHandlers();
 
         // Check URL hash for deep link
@@ -614,6 +636,11 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
           e.stopPropagation();
           deselectAll();
         }
+      });
+
+      // Escape key to deselect
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && selectedNodeId) deselectAll();
       });
 
       // Handle browser back/forward
@@ -711,7 +738,8 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
         html += '<div class="section-label">Related Files</div>';
         html += '<ul class="links-list">';
         meta.links.forEach(link => {
-          html += '<li><a href="' + escapeAttr(link.url) + '">' + escapeText(link.label) + "</a></li>";
+          const href = buildFileUrl(link.label, link.url);
+          html += '<li><a href="' + escapeAttr(href) + '">' + escapeText(link.label) + "</a></li>";
         });
         html += "</ul>";
       }
@@ -814,6 +842,14 @@ export function generateViewerHTML(diagram: WalkthroughDiagram): string {
       transitionContent(() => {
         renderAllNodes();
       });
+    }
+
+    function buildFileUrl(label, url) {
+      // Parse line number from label like "src/index.ts:56-59" or "src/index.ts:56"
+      const lineMatch = label.match(/:(\d+)/);
+      const line = lineMatch ? lineMatch[1] : "1";
+      const filePath = PROJECT_ROOT + "/" + url;
+      return "vscode://file/" + filePath + ":" + line;
     }
 
     function escapeText(s) {

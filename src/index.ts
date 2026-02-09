@@ -5,6 +5,7 @@ import { generateViewerHTML } from "./template.ts";
 import type { WalkthroughDiagram } from "./types.ts";
 
 const PORT = parseInt(process.env.TRAVERSE_PORT || "4173", 10);
+const GIT_HASH = await Bun.$`git rev-parse --short HEAD`.text().then(s => s.trim()).catch(() => "dev");
 
 // In-memory diagram store
 const diagrams = new Map<string, WalkthroughDiagram>();
@@ -26,7 +27,7 @@ Bun.serve({
           headers: { "Content-Type": "text/html; charset=utf-8" },
         });
       }
-      return new Response(generateViewerHTML(diagram), {
+      return new Response(generateViewerHTML(diagram, GIT_HASH, process.cwd()), {
         headers: { "Content-Type": "text/html; charset=utf-8" },
       });
     }
@@ -39,7 +40,7 @@ Bun.serve({
 
     // List available diagrams
     if (url.pathname === "/") {
-      return new Response(generateIndexHTML(diagrams), {
+      return new Response(generateIndexHTML(diagrams, GIT_HASH), {
         headers: { "Content-Type": "text/html; charset=utf-8" },
       });
     }
@@ -157,14 +158,21 @@ function generate404HTML(title: string, message: string): string {
 </html>`;
 }
 
-function generateIndexHTML(diagrams: Map<string, WalkthroughDiagram>): string {
+function generateIndexHTML(diagrams: Map<string, WalkthroughDiagram>, gitHash: string): string {
   const items = [...diagrams.entries()]
     .map(
       ([id, d]) => {
-        const nodeCount = Object.keys(d.nodes).length;
+        const nodes = Object.values(d.nodes);
+        const nodeCount = nodes.length;
+        const preview = nodes.slice(0, 4).map(n => escapeHTML(n.title));
+        const extra = nodeCount > 4 ? ` <span class="more">+${nodeCount - 4}</span>` : "";
+        const tags = preview.map(t => `<span class="tag">${t}</span>`).join("") + extra;
         return `<a href="/diagram/${id}" class="diagram-item">
-          <span class="diagram-title">${escapeHTML(d.summary)}</span>
-          <span class="diagram-meta">${nodeCount} node${nodeCount !== 1 ? "s" : ""}</span>
+          <div class="diagram-header">
+            <span class="diagram-title">${escapeHTML(d.summary)}</span>
+            <span class="diagram-meta">${nodeCount} node${nodeCount !== 1 ? "s" : ""}</span>
+          </div>
+          <div class="diagram-tags">${tags}</div>
         </a>`;
       },
     )
@@ -208,7 +216,9 @@ function generateIndexHTML(diagrams: Map<string, WalkthroughDiagram>): string {
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg); color: var(--text); min-height: 100vh;
+      display: flex; flex-direction: column;
     }
+    .main-content { flex: 1; }
     .header {
       padding: 48px 20px 32px;
       max-width: 520px; margin: 0 auto;
@@ -226,21 +236,35 @@ function generateIndexHTML(diagrams: Map<string, WalkthroughDiagram>): string {
     .header p { color: var(--text-muted); font-size: 14px; margin-top: 8px; }
     .diagram-list {
       max-width: 520px; margin: 0 auto; padding: 0 20px 48px;
-      display: flex; flex-direction: column; gap: 8px;
+      display: flex; flex-direction: column; gap: 12px;
     }
     .diagram-item {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 16px; border: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 10px;
+      padding: 16px; border: 1px solid var(--border);
       border-radius: 8px; text-decoration: none; color: var(--text);
       transition: border-color 0.15s, background 0.15s;
     }
     .diagram-item:hover {
       border-color: var(--text-muted); background: var(--code-bg);
     }
+    .diagram-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
     .diagram-title { font-size: 14px; font-weight: 500; }
     .diagram-meta {
       font-size: 12px; color: var(--text-muted);
       flex-shrink: 0; margin-left: 12px;
+    }
+    .diagram-tags {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    }
+    .diagram-tags .tag {
+      font-size: 11px; color: var(--text-muted);
+      background: var(--code-bg); padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .diagram-tags .more {
+      font-size: 11px; color: var(--text-muted); opacity: 0.6;
     }
     .empty {
       max-width: 520px; margin: 0 auto; padding: 60px 20px;
@@ -254,22 +278,31 @@ function generateIndexHTML(diagrams: Map<string, WalkthroughDiagram>): string {
       border-radius: 3px; font-size: 12px;
     }
     .site-footer {
-      padding: 32px 20px; text-align: center;
+      padding: 32px 20px;
       font-size: 13px; color: var(--text-muted);
+      display: flex; justify-content: space-between; align-items: center;
     }
     .site-footer .heart { color: #e25555; }
     .site-footer a { color: var(--text); text-decoration: none; }
     .site-footer a:hover { text-decoration: underline; }
+    .site-footer .hash {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 11px; opacity: 0.6;
+      color: var(--text-muted) !important;
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>Traverse <span>v0.1</span></h1>
-    <p>Interactive code walkthrough diagrams</p>
+  <div class="main-content">
+    <div class="header">
+      <h1>Traverse <span>v0.1</span></h1>
+      <p>Interactive code walkthrough diagrams</p>
+    </div>
+    ${content}
   </div>
-  ${content}
   <footer class="site-footer">
-    Made with <span class="heart">&hearts;</span> by <a href="https://dunkirk.sh">Kieran Klukas</a> &middot; <a href="https://github.com/taciturnaxolotl/traverse">GitHub</a>
+    <span>Made with &#x2764;&#xFE0F; by <a href="https://dunkirk.sh">Kieran Klukas</a></span>
+    <a class="hash" href="https://github.com/taciturnaxolotl/traverse/commit/${escapeHTML(gitHash)}">${escapeHTML(gitHash)}</a>
   </footer>
 </body>
 </html>`;
