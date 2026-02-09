@@ -5,7 +5,7 @@
   "module": "src/index.ts",
   "type": "module",
   "bin": {
-    "traverse": "./bin/traverse.js"
+    "traverse": "./bin/traverse.cjs"
   },
   "files": [
     "src",
