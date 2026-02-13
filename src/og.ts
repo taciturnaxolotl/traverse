@@ -3,7 +3,7 @@ import { initWasm, Resvg } from "@resvg/resvg-wasm";
 import { join } from "path";
 
 // Load Inter font files (woff, not woff2 — satori doesn't support woff2)
-const fontsDir = join(import.meta.dir, "../node_modules/@fontsource/inter/files");
+const fontsDir = join(import.meta.dir, "../fonts");
 const [interRegular, interBold] = await Promise.all([
   Bun.file(join(fontsDir, "inter-latin-400-normal.woff")).arrayBuffer(),
   Bun.file(join(fontsDir, "inter-latin-700-normal.woff")).arrayBuffer(),
