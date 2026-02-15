@@ -1,16 +1,17 @@
 {
   "name": "@taciturnaxolotl/traverse",
-  "version": "0.1.4",
+  "version": "0.1.7",
   "description": "Interactive code walkthrough diagrams via MCP",
   "module": "src/index.ts",
   "type": "module",
   "bin": {
-    "traverse": "./bin/traverse.cjs"
+    "traverse": "bin/traverse.cjs"
   },
   "files": [
     "src",
     "bin",
     "fonts",
+    "vendor",
     "icon.svg"
   ],
   "scripts": {

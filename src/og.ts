@@ -10,7 +10,34 @@ const [interRegular, interBold] = await Promise.all([
 ]);
 
 // Initialize resvg-wasm
-const wasmPath = join(import.meta.dir, "../node_modules/@resvg/resvg-wasm/index_bg.wasm");
+// Try bundled WASM first, then fall back to node_modules
+const possiblePaths = [
+  // Bundled WASM file (most reliable)
+  join(import.meta.dir, "../vendor/index_bg.wasm"),
+  // Development: node_modules is a sibling of src
+  join(import.meta.dir, "../node_modules/@resvg/resvg-wasm/index_bg.wasm"),
+  // Installed: in parent node_modules
+  join(import.meta.dir, "../../@resvg/resvg-wasm/index_bg.wasm"),
+  join(import.meta.dir, "../../../@resvg/resvg-wasm/index_bg.wasm"),
+];
+
+let wasmPath: string | undefined;
+for (const path of possiblePaths) {
+  if (await Bun.file(path).exists()) {
+    wasmPath = path;
+    break;
+  }
+}
+
+if (!wasmPath) {
+  console.error("Failed to find @resvg/resvg-wasm WASM file. Tried:");
+  for (const path of possiblePaths) {
+    console.error(`  - ${path}`);
+  }
+  console.error(`\nCurrent directory: ${import.meta.dir}`);
+  throw new Error("Could not find @resvg/resvg-wasm WASM file");
+}
+
 await initWasm(Bun.file(wasmPath).arrayBuffer());
 
 // Cache generated images by diagram ID
