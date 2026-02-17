@@ -1,6 +1,6 @@
 {
   "name": "@taciturnaxolotl/traverse",
-  "version": "0.1.7",
+  "version": "0.1.10",
   "description": "Interactive code walkthrough diagrams via MCP",
   "module": "src/index.ts",
   "type": "module",

@@ -654,6 +654,8 @@ export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string 
 
     const DIAGRAM_DATA = ${diagramJSON};
     const PROJECT_ROOT = ${JSON.stringify(projectRoot)};
+    const GITHUB_REPO = ${JSON.stringify(diagram.githubRepo || "")};
+    const GITHUB_REF = ${JSON.stringify(diagram.githubRef || "main")};
     const SHARE_SERVER_URL = ${JSON.stringify(shareServerUrl)};
     const DIAGRAM_ID = ${JSON.stringify(diagramId)};
     const VIEWER_MODE = ${JSON.stringify(mode)};
@@ -814,7 +816,8 @@ export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string 
         html += '<ul class="links-list">';
         meta.links.forEach(link => {
           const href = buildFileUrl(link.label, link.url);
-          html += '<li><a href="' + escapeAttr(href) + '">' + escapeText(link.label) + "</a></li>";
+          const target = GITHUB_REPO ? ' target="_blank" rel="noopener"' : '';
+          html += '<li><a href="' + escapeAttr(href) + '"' + target + '>' + escapeText(link.label) + "</a></li>";
         });
         html += "</ul>";
       }
@@ -921,9 +924,17 @@ export function generateViewerHTML(diagram: WalkthroughDiagram, gitHash: string 
 
     function buildFileUrl(label, url) {
       // Parse line number from label like "src/index.ts:56-59" or "src/index.ts:56"
-      const lineMatch = label.match(/:(\d+)/);
+      const lineMatch = label.match(/:(\d+)(?:-(\d+))?/);
       const line = lineMatch ? lineMatch[1] : "1";
-      const filePath = PROJECT_ROOT + "/" + url;
+      // Strip any :line suffix from url path
+      const cleanUrl = url.replace(/:[\d-]+$/, "");
+      if (GITHUB_REPO) {
+        const lineAnchor = lineMatch && lineMatch[2]
+          ? "?plain=1#L" + lineMatch[1] + "-L" + lineMatch[2]
+          : "?plain=1#L" + line;
+        return GITHUB_REPO + "/blob/" + GITHUB_REF + "/" + cleanUrl + lineAnchor;
+      }
+      const filePath = PROJECT_ROOT + "/" + cleanUrl;
       return "vscode://file/" + filePath + ":" + line;
     }
 
