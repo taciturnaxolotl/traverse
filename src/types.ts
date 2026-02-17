@@ -14,6 +14,8 @@ export interface WalkthroughDiagram {
   code: string;
   summary: string;
   nodes: Record<string, NodeMetadata>;
+  githubRepo?: string;
+  githubRef?: string;
   createdAt?: string;
 }
 

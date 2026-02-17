@@ -14,6 +14,17 @@ const VERSION = await Bun.$`git rev-parse --short HEAD`.text().then(s => s.trim(
   const pkg = await Bun.file(import.meta.dir + "/../package.json").json();
   return `v${pkg.version}`;
 });
+const GIT_HASH = await Bun.$`git rev-parse HEAD`.text().then(s => s.trim()).catch(() => "");
+const GITHUB_REPO = await Bun.$`git remote get-url origin`.text().then(url => {
+  url = url.trim();
+  // Convert SSH URLs: git@github.com:user/repo.git -> https://github.com/user/repo
+  const sshMatch = url.match(/^git@github\.com:(.+?)(?:\.git)?$/);
+  if (sshMatch) return `https://github.com/${sshMatch[1]}`;
+  // Convert HTTPS URLs: https://github.com/user/repo.git -> https://github.com/user/repo
+  const httpsMatch = url.match(/^https:\/\/github\.com\/(.+?)(?:\.git)?$/);
+  if (httpsMatch) return `https://github.com/${httpsMatch[1]}`;
+  return "";
+}).catch(() => "");
 initDb();
 
 // Load persisted diagrams
@@ -119,6 +130,8 @@ try {
             code: body.code,
             summary: body.summary,
             nodes: body.nodes,
+            githubRepo: body.githubRepo || undefined,
+            githubRef: body.githubRef || undefined,
             createdAt: new Date().toISOString(),
           };
           diagrams.set(id, diagram);
@@ -230,7 +243,7 @@ Then build the diagram:
       const res = await fetch(`http://localhost:${PORT}/api/diagrams`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, summary, nodes }),
+        body: JSON.stringify({ code, summary, nodes, githubRepo: GITHUB_REPO || undefined, githubRef: GIT_HASH || undefined }),
       });
       if (!res.ok) {
         return {
@@ -245,6 +258,7 @@ Then build the diagram:
         code,
         summary,
         nodes,
+        githubRepo: GITHUB_REPO || undefined, githubRef: GIT_HASH || undefined,
         createdAt: new Date().toISOString(),
       };
       diagrams.set(id, diagram);
